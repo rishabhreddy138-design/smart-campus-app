@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom border-secondary-subtle">
+    <h1 class="h2">Assignments</h1>
+    {% if current_user.role == 'faculty' %}
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createAssignmentModal">
+        <i class="bi bi-plus-circle me-1"></i> Create New Assignment
+    </button>
+    {% endif %}
+</div>
+
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% for assignment in assignments %}
+        {% include '_assignment_card.html' %}
+    {% else %}
+    <div class="col">
+        <p class="text-muted">No assignments have been created yet.</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% if current_user.role == 'faculty' %}
+<div class="modal fade" id="createAssignmentModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Create New Assignment</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form method="POST" action="{{ url_for('routes.create_assignment') }}" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            <div class="mb-3">{{ form.title.label(class="form-label") }}{{ form.title(class="form-control") }}</div>
+            <div class="mb-3">{{ form.description.label(class="form-label") }}{{ form.description(class="form-control", rows=4) }}</div>
+            <div class="mb-3">{{ form.deadline.label(class="form-label") }}{{ form.deadline(class="form-control") }}</div>
+            <div class="mb-3">{{ form.attachment.label(class="form-label") }}{{ form.attachment(class="form-control") }}</div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

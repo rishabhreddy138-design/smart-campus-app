@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom border-secondary-subtle">
+    <div>
+        <h1 class="h2">Submissions</h1>
+        <p class="text-muted">For assignment: <strong>{{ assignment.title }}</strong></p>
+    </div>
+    <a href="{{ url_for('routes.assignments') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Assignments
+    </a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th scope="col">Student</th>
+                <th scope="col">Submitted On</th>
+                <th scope="col">Status</th>
+                <th scope="col">Downloads</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sub in submissions %}
+            <tr class="{% if sub.status == 'late' %}table-danger{% endif %}">
+                <td>{{ sub.student.name }}</td>
+                <td>{{ sub.submitted_on.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    <span class="badge {% if sub.status == 'late' %}bg-danger{% else %}bg-success{% endif %}">{{ sub.status|title }}</span>
+                </td>
+                <td>
+                    {% if sub.file_path %}<a href="{{ url_for('routes.download_file', filename=sub.file_path) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i> File</a>{% endif %}
+                    {% if sub.text_content %}<button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#textContentModal-{{ sub.id }}"><i class="bi bi-body-text"></i> Text</button>{% endif %}
+                </td>
+            </tr>
+            <div class="modal fade" id="textContentModal-{{ sub.id }}" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header"><h5 class="modal-title">Submission from {{ sub.student.name }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                        <div class="modal-body"><pre>{{ sub.text_content }}</pre></div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <tr><td colspan="4" class="text-center text-muted py-4">No submissions for this assignment yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

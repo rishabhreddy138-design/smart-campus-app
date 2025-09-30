@@ -1,0 +1,13 @@
+# netlify.toml
+[build]
+  command = "pip install -r requirements.txt"
+  functions = "."
+
+[functions]
+  # This tells Netlify to include your app's folders in the deployment
+  included_files = ["run.py", "portal/**", "templates/**", "instance/**"]
+
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/netlify_handler"
+  status = 200

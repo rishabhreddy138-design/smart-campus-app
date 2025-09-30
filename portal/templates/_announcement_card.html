@@ -1,0 +1,8 @@
+<div class="card mb-3">
+    <div class="card-body">
+        <p class="card-text">{{ announcement.message }}</p>
+    </div>
+    <div class="card-footer text-muted small">
+        Posted by {{ announcement.poster.name }} on {{ announcement.date_posted.strftime('%Y-%m-%d') }}
+    </div>
+</div>

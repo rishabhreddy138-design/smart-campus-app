@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom border-secondary-subtle">
+    <h1 class="h2">Faculty Dashboard</h1>
+    <a href="{{ url_for('routes.export_assignments') }}" class="btn btn-success">
+        <i class="bi bi-file-earmark-spreadsheet-fill me-1"></i> Export Report
+    </a>
+</div>
+
+<div class="row">
+    <!-- Student List Column -->
+    <div class="col-md-4">
+        <h3 class="h4 mb-3">Student Overview</h3>
+        <div class="list-group" id="student-list">
+            {% for data in student_data %}
+                {% set status_class = 'list-group-item-success' if data.status == 'ok' else 'list-group-item-warning' if data.status == 'late' else 'list-group-item-danger' %}
+                <a href="#" class="list-group-item list-group-item-action {{ status_class }}" data-student-id="{{ data.student.id }}">
+                    {{ data.student.name }}
+                </a>
+            {% else %}
+                <p class="text-muted">No students have registered yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Analytics Pane Column -->
+    <div class="col-md-8 mt-4 mt-md-0">
+        <h3 class="h4 mb-3">Student Analytics</h3>
+        <div id="analytics-pane" class="card">
+             <div class="card-body text-center text-muted p-5">
+                <i class="bi bi-person-check-fill fs-1"></i>
+                <p class="mt-2">Select a student from the list to view their detailed analytics.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const studentList = document.getElementById('student-list');
+    const analyticsPane = document.getElementById('analytics-pane');
+
+    if (studentList) {
+        studentList.addEventListener('click', function(event) {
+            event.preventDefault();
+            const studentLink = event.target.closest('.list-group-item-action');
+
+            if (studentLink) {
+                // Remove 'active' class from all other items
+                document.querySelectorAll('#student-list .list-group-item-action').forEach(link => {
+                    link.classList.remove('active');
+                });
+                // Add 'active' class to the clicked item
+                studentLink.classList.add('active');
+
+                const studentId = studentLink.dataset.studentId;
+                
+                analyticsPane.innerHTML = `
+                    <div class="card-body text-center text-muted p-5">
+                        <div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>
+                        <p class="mt-2">Fetching analytics...</p>
+                    </div>`;
+
+                fetch(`/analytics/student/${studentId}`)
+                    .then(response => response.text())
+                    .then(html => {
+                        analyticsPane.innerHTML = html;
+                    })
+                    .catch(error => {
+                        analyticsPane.innerHTML = `<div class="card-body text-center text-danger p-5">Failed to load analytics.</div>`;
+                        console.error('Error fetching analytics:', error);
+                    });
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

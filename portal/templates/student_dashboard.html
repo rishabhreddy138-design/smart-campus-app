@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom border-secondary-subtle">
+    <h1 class="h2">Student Dashboard</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <h3 class="h4 mb-3">Pending Assignments</h3>
+        <div class="row row-cols-1 row-cols-lg-2 g-4">
+            {% for assignment in pending_assignments %}
+                {% include '_assignment_card.html' %}
+            {% else %}
+                <div class="col">
+                    <div class="card p-4 text-center">
+                        <i class="bi bi-check2-circle fs-1 text-success"></i>
+                        <p class="text-muted mt-2">No pending assignments. Great job!</p>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title">My Progress</h5>
+                <p>You have completed {{ progress|round|int }}% of all assignments.</p>
+                <div class="progress" role="progressbar" style="height: 25px;">
+                    <div class="progress-bar" style="width: {{ progress }}%;">{{ progress|round|int }}%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4 mt-4 mt-md-0">
+        <h3 class="h4 mb-3">Recent Announcements</h3>
+        {% for announcement in announcements %}
+            {% include '_announcement_card.html' %}
+        {% else %}
+            <p class="text-muted">No announcements right now.</p>
+        {% endfor %}
+
+        <h3 class="h4 mt-4">My Badges</h3>
+        <div class="d-flex flex-wrap">
+            {% for badge in badges %}
+                <div class="text-center p-2" title="Earned {{ badge.earned_on.strftime('%Y-%m-%d') }}">
+                    <i class="bi bi-patch-check-fill fs-1 text-success"></i>
+                    <p class="small">{{ badge.badge_name }}</p>
+                </div>
+            {% else %}
+                <p class="text-muted">No badges earned yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

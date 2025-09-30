@@ -1,0 +1,99 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --primary-accent: #0d6efd;
+    --primary-accent-hover: #0a58ca;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+[data-bs-theme="dark"] {
+    --bs-body-bg: #121212;
+    --bs-body-color: #e0e0e0;
+    --surface-color: #1e1e1e;
+    --bs-border-color: #333;
+    --bs-secondary-color: #a0a0a0;
+}
+[data-bs-theme="dark"] .auth-card {
+    background: rgba(30, 30, 30, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+[data-bs-theme="dark"] .navbar {
+    background: rgba(30, 30, 30, 0.75) !important;
+    backdrop-filter: blur(12px);
+}
+[data-bs-theme="dark"] .card, [data-bs-theme="dark"] .modal-content, [data-bs-theme="dark"] .list-group-item {
+    background-color: var(--surface-color);
+}
+[data-bs-theme="dark"] .form-control, [data-bs-theme="dark"] .form-select {
+    background-color: #2a2a2a;
+}
+[data-bs-theme="dark"] .table {
+    --bs-table-bg: var(--surface-color);
+    --bs-table-striped-bg: #2a2a2a;
+    --bs-table-hover-bg: #343434;
+}
+
+[data-bs-theme="light"] {
+    --bs-body-bg: #f8f9fa;
+    --bs-body-color: #212529;
+    --surface-color: #ffffff;
+    --bs-border-color: #dee2e6;
+    --bs-secondary-color: #6c757d;
+}
+[data-bs-theme="light"] .auth-card {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+}
+[data-bs-theme="light"] .navbar {
+    background: rgba(255, 255, 255, 0.75) !important;
+    backdrop-filter: blur(12px);
+}
+[data-bs-theme="light"] .card, [data-bs-theme="light"] .modal-content, [data-bs-theme="light"] .list-group-item {
+    background-color: var(--surface-color);
+}
+
+.auth-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+.card {
+    border-radius: 0.75rem;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.card:hover {
+    transform: translateY(-5px);
+}
+.btn-primary {
+    background-color: var(--primary-accent);
+    border-color: var(--primary-accent);
+    font-weight: 600;
+}
+.btn-primary:hover {
+    background-color: var(--primary-accent-hover);
+    border-color: var(--primary-accent-hover);
+}
+
+.theme-icon-dark { display: none; }
+.theme-icon-light { display: inline-block; }
+[data-bs-theme="dark"] .theme-icon-dark { display: inline-block; }
+[data-bs-theme="dark"] .theme-icon-light { display: none; }
+
+/* Student List Highlighting */
+#student-list .list-group-item-action {
+    transition: all 0.2s ease-in-out;
+}
+#student-list .list-group-item-action:hover, #student-list .list-group-item-action.active {
+    transform: scale(1.03);
+    font-weight: bold;
+}
