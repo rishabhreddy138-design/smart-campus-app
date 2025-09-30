@@ -1,5 +1,3 @@
-# Corrected netlify.toml
-
 [build]
   command = "pip install -r requirements.txt"
 
