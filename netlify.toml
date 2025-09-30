@@ -9,3 +9,14 @@
   from = "/*"
   to = "/.netlify/functions/netlify_handler"
   status = 200
+[build]
+  command = "pip install -r requirements.txt"
+
+[functions]
+  directory = "."
+  included_files = ["run.py", "portal/**", "templates/**", "instance/**"]
+
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/netlify_handler"
+  status = 200
