@@ -23,4 +23,26 @@
         {% endfor %}
     </div>
 </div>
+{% if current_user.role == 'admin' %}
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Post New Announcement</h5>
+                <form action="{{ url_for('routes.create_announcement') }}" method="POST">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.message.label(class_='form-label') }}
+                        {{ form.message(class_='form-control', rows=3, placeholder='Write an announcement for everyone...') }}
+                        {% for error in form.message.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {{ form.submit(class_='btn btn-primary') }}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

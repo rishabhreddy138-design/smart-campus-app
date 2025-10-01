@@ -52,3 +52,7 @@ class ProfileUpdateForm(FlaskForm):
     bio = TextAreaField('Bio')
     avatar = FileField('Profile Picture')
     submit = SubmitField('Save Changes')
+
+class AnnouncementForm(FlaskForm):
+    message = TextAreaField('Announcement', validators=[DataRequired(), Length(min=5, max=5000)])
+    submit = SubmitField('Post Announcement')

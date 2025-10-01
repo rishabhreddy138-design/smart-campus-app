@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false
 # import csv
 # import io
 # import os
@@ -216,13 +217,14 @@ from flask import (Blueprint, Response, current_app, flash, jsonify,
                    redirect, render_template, request, send_from_directory,
                    url_for)
 from flask_login import (current_user, login_required, login_user,
-                         logout_user)
+                         logout_user)  # type: ignore
 from sqlalchemy import func
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from . import db
 from .forms import (AssignmentCreationForm, LoginForm, MaterialUploadForm,
-                    RegistrationForm, SubmissionForm, ProfileUpdateForm)
+                    RegistrationForm, SubmissionForm, ProfileUpdateForm,
+                    AnnouncementForm)
 from .models import (Announcement, Assignment, Badge, Material, Submission,
                      User, Profile)
 from .utils import save_file, save_avatar
@@ -240,6 +242,9 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
         if user and check_password_hash(user.password_hash, form.password.data):
+            if user.is_blocked:
+                flash('Your account has been blocked. Contact admin.', 'danger')
+                return redirect(url_for('routes.login'))
             login_user(user, remember=True)
             return redirect(url_for('routes.dashboard'))
         else:
@@ -269,10 +274,14 @@ def logout():
 def get_student_dashboard_data():
     """Helper function to fetch data for the student dashboard."""
     submitted_ids = [s.assignment_id for s in current_user.submissions]
-    pending_assignments = Assignment.query.filter(Assignment.id.notin_(submitted_ids), Assignment.deadline > datetime.utcnow()).order_by(Assignment.deadline.asc()).all()
+    # Pending = all assignments not yet submitted by this student (including past-due)
+    query = Assignment.query
+    if submitted_ids:
+        query = query.filter(~Assignment.id.in_(submitted_ids))
+    pending_assignments = query.order_by(Assignment.deadline.asc()).all()
     total_assignments = db.session.query(Assignment).count()
     progress = (len(submitted_ids) / total_assignments) * 100 if total_assignments > 0 else 0
-    return {"pending_assignments": pending_assignments, "progress": progress, "badges": current_user.badges}
+    return {"pending_assignments": pending_assignments, "progress": progress, "badges": current_user.badges, "submitted_ids": submitted_ids}
 
 def get_faculty_dashboard_data():
     """Helper function to fetch and process data for the faculty dashboard."""
@@ -306,7 +315,80 @@ def dashboard():
         return render_template('faculty_dashboard.html', **get_faculty_dashboard_data())
     else: # Admin
         announcements = Announcement.query.order_by(Announcement.date_posted.desc()).limit(5).all()
-        return render_template('admin_dashboard.html', announcements=announcements, user_count=User.query.count())
+        form = AnnouncementForm()
+        return render_template('admin_dashboard.html', announcements=announcements, user_count=User.query.count(), form=form)
+
+@main_bp.route('/announcements/create', methods=['POST'])
+@login_required
+def create_announcement():
+    """Allow only admins to create announcements."""
+    if current_user.role != 'admin':
+        flash('You do not have permission to create announcements.', 'danger')
+        return redirect(url_for('routes.dashboard'))
+    form = AnnouncementForm()
+    if form.validate_on_submit():
+        announcement = Announcement(message=form.message.data, user_id=current_user.id)
+        db.session.add(announcement)
+        db.session.commit()
+        flash('Announcement posted.', 'success')
+    else:
+        for field, errors in form.errors.items():
+            for err in errors:
+                flash(f"{field}: {err}", 'danger')
+    return redirect(url_for('routes.dashboard'))
+
+@main_bp.route('/announcements/<int:announcement_id>/delete', methods=['POST'])
+@login_required
+def delete_announcement(announcement_id):
+    """Allow only admins to delete announcements."""
+    if current_user.role != 'admin':
+        flash('You do not have permission to delete announcements.', 'danger')
+        return redirect(url_for('routes.dashboard'))
+    announcement = Announcement.query.get_or_404(announcement_id)
+    db.session.delete(announcement)
+    db.session.commit()
+    flash('Announcement deleted.', 'success')
+    return redirect(url_for('routes.dashboard'))
+
+@main_bp.route('/admin/overview.json')
+@login_required
+def admin_overview_json():
+    """Return a summarized JSON snapshot of the app for admins."""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Permission denied'}), 403
+    data = {
+        'counts': {
+            'users': db.session.query(User).count(),
+            'materials': db.session.query(Material).count(),
+            'assignments': db.session.query(Assignment).count(),
+            'submissions': db.session.query(Submission).count(),
+            'announcements': db.session.query(Announcement).count(),
+            'badges': db.session.query(Badge).count(),
+        },
+        'latest': {
+            'users': [
+                {'id': u.id, 'name': u.name, 'email': u.email, 'role': u.role}
+                for u in User.query.order_by(User.id.desc()).limit(5).all()
+            ],
+            'announcements': [
+                {'id': a.id, 'message': a.message, 'date_posted': a.date_posted.isoformat(), 'user_id': a.user_id}
+                for a in Announcement.query.order_by(Announcement.date_posted.desc()).limit(5).all()
+            ],
+            'assignments': [
+                {'id': asg.id, 'title': asg.title, 'deadline': asg.deadline.isoformat(), 'creator_id': asg.user_id}
+                for asg in Assignment.query.order_by(Assignment.created_date.desc()).limit(5).all()
+            ],
+            'materials': [
+                {'id': m.id, 'title': m.title, 'uploaded': m.upload_date.isoformat(), 'uploader_id': m.user_id}
+                for m in Material.query.order_by(Material.upload_date.desc()).limit(5).all()
+            ],
+            'submissions': [
+                {'id': s.id, 'assignment_id': s.assignment_id, 'user_id': s.user_id, 'status': s.status, 'submitted_on': s.submitted_on.isoformat()}
+                for s in Submission.query.order_by(Submission.submitted_on.desc()).limit(5).all()
+            ],
+        }
+    }
+    return jsonify(data)
 
 @main_bp.route("/analytics/student/<int:student_id>")
 @login_required
@@ -379,7 +461,7 @@ def upload_material():
 def delete_material(material_id):
     """Allows the uploader (faculty) to delete a material and its file."""
     material = Material.query.get_or_404(material_id)
-    if current_user.role != 'faculty' or material.user_id != current_user.id:
+    if not (current_user.role == 'admin' or (current_user.role == 'faculty' and material.user_id == current_user.id)):
         flash('You do not have permission to delete this material.', 'danger')
         return redirect(url_for('routes.materials'))
     try:
@@ -408,7 +490,19 @@ def assignments():
     form = AssignmentCreationForm()
     all_assignments = Assignment.query.order_by(Assignment.deadline.desc()).all()
     submitted_ids = [s.assignment_id for s in current_user.submissions] if current_user.role == 'student' else []
-    return render_template('assignments.html', assignments=all_assignments, form=form, submitted_ids=submitted_ids, now=datetime.utcnow())
+    # Map of assignment_id -> submission for the current student (to expose their file/text for download/view)
+    student_submissions_map = {}
+    if current_user.role == 'student':
+        subs = Submission.query.filter_by(user_id=current_user.id).all()
+        student_submissions_map = {s.assignment_id: s for s in subs}
+    return render_template(
+        'assignments.html',
+        assignments=all_assignments,
+        form=form,
+        submitted_ids=submitted_ids,
+        student_submissions_map=student_submissions_map,
+        now=datetime.utcnow()
+    )
 
 @main_bp.route("/assignments/create", methods=['POST'])
 @login_required
@@ -432,7 +526,7 @@ def create_assignment():
 def delete_assignment(assignment_id):
     """Allows the creator (faculty) to delete an assignment, its attachment, and submissions."""
     assignment = Assignment.query.get_or_404(assignment_id)
-    if current_user.role != 'faculty' or assignment.user_id != current_user.id:
+    if not (current_user.role == 'admin' or (current_user.role == 'faculty' and assignment.user_id == current_user.id)):
         flash('You do not have permission to delete this assignment.', 'danger')
         return redirect(url_for('routes.assignments'))
     try:
@@ -479,6 +573,11 @@ def submit_assignment(assignment_id):
         db.session.commit()
         flash(f'Assignment submitted! Status: {status.upper()}', 'success')
         return redirect(url_for('routes.assignments'))
+    elif request.method == 'POST':
+        # Surface validation errors to the user
+        for field, errors in form.errors.items():
+            for err in errors:
+                flash(f"{field}: {err}", 'danger')
     return render_template('submit_assignment.html', title='Submit Assignment', form=form, assignment=assignment)
 
 @main_bp.route("/assignment/<int:assignment_id>/submissions")
@@ -501,6 +600,45 @@ def set_theme():
         db.session.commit()
         return jsonify({'status': 'success'})
     return jsonify({'status': 'error', 'message': 'Invalid theme'}), 400
+
+@main_bp.route('/admin/users')
+@login_required
+def admin_users():
+    """List all users for admins with their roles."""
+    if current_user.role != 'admin':
+        flash('Permission denied.', 'danger')
+        return redirect(url_for('routes.dashboard'))
+    users = User.query.order_by(User.name.asc()).all()
+    return render_template('admin_users.html', users=users)
+
+@main_bp.route('/admin/users/<int:user_id>/block', methods=['POST'])
+@login_required
+def block_user(user_id):
+    """Admin can block a user (prevents login)."""
+    if current_user.role != 'admin':
+        flash('Permission denied.', 'danger')
+        return redirect(url_for('routes.dashboard'))
+    user = User.query.get_or_404(user_id)
+    if user.id == current_user.id:
+        flash('You cannot block yourself.', 'warning')
+        return redirect(url_for('routes.admin_users'))
+    user.is_blocked = True
+    db.session.commit()
+    flash(f'Blocked {user.name}.', 'success')
+    return redirect(url_for('routes.admin_users'))
+
+@main_bp.route('/admin/users/<int:user_id>/unblock', methods=['POST'])
+@login_required
+def unblock_user(user_id):
+    """Admin can unblock a user."""
+    if current_user.role != 'admin':
+        flash('Permission denied.', 'danger')
+        return redirect(url_for('routes.dashboard'))
+    user = User.query.get_or_404(user_id)
+    user.is_blocked = False
+    db.session.commit()
+    flash(f'Unblocked {user.name}.', 'success')
+    return redirect(url_for('routes.admin_users'))
 
 @main_bp.route('/profile', methods=['GET', 'POST'])
 @login_required

@@ -11,18 +11,31 @@
         <div class="card-footer">
             {% if current_user.role == 'student' %}
                 {% if assignment.id in submitted_ids %}
-                    <button class="btn btn-success w-100" disabled><i class="bi bi-check-circle-fill me-1"></i> Submitted</button>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success" disabled><i class="bi bi-check-circle-fill me-1"></i> Submitted</button>
+                        {% set my_sub = student_submissions_map.get(assignment.id) %}
+                        {% if my_sub and my_sub.file_path %}
+                            <a href="{{ url_for('routes.download_file', filename=my_sub.file_path) }}" class="btn btn-outline-primary">
+                                <i class="bi bi-download me-1"></i> Download Your Submission
+                            </a>
+                        {% endif %}
+                        {% if my_sub and my_sub.text_content %}
+                            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#myTextContentModal-{{ my_sub.id }}">
+                                <i class="bi bi-body-text me-1"></i> View Your Text Submission
+                            </button>
+                        {% endif %}
+                    </div>
                 {% elif assignment.deadline < now %}
                     <a href="{{ url_for('routes.submit_assignment', assignment_id=assignment.id) }}" class="btn btn-warning w-100"><i class="bi bi-exclamation-triangle-fill me-1"></i> Submit Late</a>
                 {% else %}
                     <a href="{{ url_for('routes.submit_assignment', assignment_id=assignment.id) }}" class="btn btn-primary w-100"><i class="bi bi-send-fill me-1"></i> Submit Now</a>
                 {% endif %}
-            {% elif current_user.role == 'faculty' %}
+            {% elif current_user.role in ['faculty', 'admin'] %}
                 <div class="d-flex gap-2">
                     <a href="{{ url_for('routes.view_submissions', assignment_id=assignment.id) }}" class="btn btn-info flex-fill">
                         <i class="bi bi-people-fill me-1"></i> Submissions ({{ assignment.submissions.count() }})
                     </a>
-                    {% if assignment.user_id == current_user.id %}
+                    {% if current_user.role == 'admin' or assignment.user_id == current_user.id %}
                     <form action="{{ url_for('routes.delete_assignment', assignment_id=assignment.id) }}" method="POST" onsubmit="return confirm('Delete this assignment and all its submissions?');" class="flex-fill">
                         <button type="submit" class="btn btn-outline-danger w-100">
                             <i class="bi bi-trash3 me-1"></i> Delete
@@ -34,3 +47,20 @@
         </div>
     </div>
 </div>
+
+{% if current_user.role == 'student' %}
+    {% set my_sub = student_submissions_map.get(assignment.id) %}
+    {% if my_sub and my_sub.text_content %}
+    <div class="modal fade" id="myTextContentModal-{{ my_sub.id }}" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Your Text Submission</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body"><pre class="mb-0">{{ my_sub.text_content }}</pre></div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endif %}

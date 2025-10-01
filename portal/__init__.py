@@ -2,6 +2,7 @@ import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from sqlalchemy import text
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -34,5 +35,14 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        # Ensure 'is_blocked' column exists on 'user' table (SQLite safe)
+        try:
+            existing_columns = [row['name'] for row in db.session.execute(text("PRAGMA table_info(user)")).mappings()]
+            if 'is_blocked' not in existing_columns:
+                db.session.execute(text("ALTER TABLE user ADD COLUMN is_blocked BOOLEAN NOT NULL DEFAULT 0"))
+                db.session.commit()
+        except Exception:
+            # Do not crash app startup if pragma/alter fails; leave DB as-is
+            db.session.rollback()
 
     return app

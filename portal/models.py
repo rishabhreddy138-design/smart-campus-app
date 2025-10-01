@@ -9,6 +9,7 @@ class User(db.Model, UserMixin):
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='student')
     theme = db.Column(db.String(10), default='dark')
+    is_blocked = db.Column(db.Boolean, nullable=False, default=False)
     
     materials = db.relationship('Material', backref='uploader', lazy=True)
     assignments = db.relationship('Assignment', backref='creator', lazy=True)
@@ -16,6 +17,11 @@ class User(db.Model, UserMixin):
     announcements = db.relationship('Announcement', backref='poster', lazy=True)
     badges = db.relationship('Badge', backref='user', lazy=True)
     profile = db.relationship('Profile', backref='user', lazy=True, uselist=False)
+
+    @property
+    def is_active(self):
+        """Flask-Login uses this to determine if the user account is active."""
+        return not self.is_blocked
 
 class Material(db.Model):
     id = db.Column(db.Integer, primary_key=True)
